@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hoja de Cálculo</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</head>
+<body class="bg-light">
+    <span></span>
+
+    <div class="card">
+        <div class=" row m-5 bg-white ">
+            <div class="col-lg-3"><img style="width:350px" src="https://compraspublicas.cba.gov.ar/wp-content/uploads/2024/01/4.png" alt=""></div>
+            <div class="col-lg-6 text-mute text-center"> <h1>Identidad </h1> </div>
+            <div class="col-lg-3"><img style="width:190px" src="https://compraspublicas.cba.gov.ar/wp-content/uploads/2024/01/6.png" alt=""> </div>
+            <img src="https://compraspublicas.cba.gov.ar/wp-content/uploads/2024/01/pie.png" style="width: 100%; height: 5px;" alt="">
+        </div>
+        
+    </div>
+    
+
+    <div class="container mt-5">
+    <div class="mb-3">
+        <input class="col-lg-8 input p-2" style="border-radius: 20px; border:1px solid #007BFF" type="text" id="searchInput" class="form-control" placeholder="Buscar...">
+        <button class="btn btn-primary ml-2" onclick="search()">Buscar</button>
+        <button class="btn btn-secondary ml-2" onclick="clearSearch()">Limpiar Búsqueda</button>
+      </div>
+   
+    <table class="table table-bordered table-striped" id="data-grid">
+        <thead class="bg-primary text-white">
+            <tr>
+              <th>Nombre del documento</th>
+              <th>Fecha de Creación</th>
+              <th>Area</th>
+              <th>Tipo</th>
+              <th>Descripción</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+      <tbody></tbody>
+    </table>
+
+    <nav aria-label="Page navigation">
+      <ul class="pagination">
+        <!-- Los elementos de paginación se agregarán dinámicamente aquí -->
+      </ul>
+    </nav>
+  </div>
+  <footer class="bg-primary text-white" style="height: 150px;">
+   <div class="container p-5">
+    <div class="col-lg-4"></div>
+    <div class="col-lg-4"></div>
+    <div class="col-lg-4">suaf.compraspublicas@cba.gov.ar</div>
+   </div>
+
+  </footer>
+
+  <script>
+    var itemsPerPage = 10; // Número de elementos por página
+    var currentPage = 1;   // Página actual
+    var rows;              // Variable global para almacenar las filas
+
+    // Agregar una cadena de consulta única para evitar la caché
+    var url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTwp_cz0ESa5N_75UxW1Wusa1jwyC95u5i78z4eldE0n3DQUti6ScweJDpqma88hGCpiOXn08V_DGYR/pubhtml?t=' + Date.now();
+
+    // Realizar la solicitud HTTP a la URL
+    $.get(url, function (data) {
+      var tempContainer = $('<div>');
+      tempContainer.html(data);
+
+      // Seleccionar las filas de la tabla
+      rows = tempContainer.find('table.waffle tbody tr');
+
+      // Calcular el número total de páginas
+      var totalPages = Math.ceil(rows.length / itemsPerPage);
+
+      // Inicializar la paginación
+      updatePagination(totalPages);
+
+      // Mostrar los elementos de la primera página
+      showPage(1);
+    })
+    .fail(function (error) {
+      console.error('Error al obtener datos:', error);
+    });
+
+    function updatePagination(totalPages) {
+      var paginationList = $('.pagination');
+      paginationList.empty();
+
+      for (var i = 1; i <= totalPages; i++) {
+        var listItem = $('<li class="page-item"><a class="page-link" href="#">' + i + '</a></li>');
+        paginationList.append(listItem);
+      }
+
+      // Agregar eventos de clic a los enlaces de paginación
+      paginationList.find('a').on('click', function () {
+        var page = parseInt($(this).text());
+        showPage(page);
+      });
+    }
+
+    function showPage(page) {
+      currentPage = page;
+
+      // Calcular los índices de inicio y fin para los elementos de la página actual
+      var startIndex = (page - 1) * itemsPerPage;
+      var endIndex = startIndex + itemsPerPage;
+
+      // Actualizar la tabla
+      updateTable(rows.slice(startIndex, endIndex));
+    }
+
+    function updateTable(displayedRows) {
+      var tableBody = $('#data-grid tbody');
+      tableBody.empty();
+
+      displayedRows.each(function (index, element) {
+        var rowData = [];
+
+        // Iterar sobre las celdas de cada fila
+        $(element).find('td').each(function () {
+          rowData.push($(this).text());
+        });
+
+        var rowHtml = '<tr>';
+        for (var i = 0; i < rowData.length; i++) {
+          if (i === 5) {
+            rowHtml += '<td><button class="btn btn-primary" title="Abrir" onclick="window.open(\'' + rowData[i] + '\', \'_blank\')"> <i class="fas fa-share " ></i></button></td>';
+          } else {
+            rowHtml += '<td>' + rowData[i] + '</td>';
+          }
+        }
+        rowHtml += '</tr>';
+        tableBody.append(rowHtml);
+      });
+
+      // Actualizar la paginación después de cambiar la página
+      updatePagination(Math.ceil(rows.length / itemsPerPage));
+
+      // Marcar la página actual como activa en el paginador
+      $('.pagination li').removeClass('active');
+      $('.pagination li').eq(currentPage - 1).addClass('active');
+    }
+
+    function search() {
+      var searchTerm = $('#searchInput').val().toLowerCase();
+      var filteredRows = rows.filter(function () {
+        return $(this).text().toLowerCase().includes(searchTerm);
+      });
+
+      updateTable(filteredRows);
+    }
+
+    function clearSearch() {
+      $('#searchInput').val('');
+      updateTable(rows);
+    }
+  </script>
+</body>
+</html>
